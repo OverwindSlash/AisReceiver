@@ -7,24 +7,30 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using Ais.Net;
 
 // Main function
 AisConfig? aisConfig = GetAisConfiguration();
-ReceiverHost? receiver = CreateReceiver(aisConfig);
 MqConfig? mqConfig = GetMqConfiguration();
+StorageConfig? storageConfig = GetStorageConfiguration();
 
-var config = new ProducerConfig
-{
-    BootstrapServers = $"{mqConfig.Host}:{mqConfig.Port}", // Kafka broker地址
-};
+ReceiverHost? receiver = CreateReceiver(aisConfig);
+IProducer<string, string> producer = CreateMqProducer(mqConfig);
 
-var producer = new ProducerBuilder<string, string>(config).Build();
+StreamWriter staticWriter = CreateStaticLogWriter(storageConfig);
+StreamWriter dynamicWriter = CreateDynamicLogWriter(storageConfig);
+StreamWriter trackWriter = CreateTrackJsonWriter(storageConfig);
 
+// Json options
 var options = new JsonSerializerOptions
 {
     Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
 };
+
+// Track options
+int id = 0;
+int interval = 10;
+string target = storageConfig.TrackMmsi;
+var tracks = new List<Location>();
 
 receiver.Messages.Subscribe(async msg =>
 {
@@ -39,10 +45,7 @@ receiver.Messages.Subscribe(async msg =>
             break;
         case 24:
             isStatic = true;
-            if (msg is AisMessageType24Part1)
-            {
-                json = HandleType24Message(msg);
-            }
+            json = HandleType24Message(msg);
             break;
 
         // For dynamic info:
@@ -61,24 +64,9 @@ receiver.Messages.Subscribe(async msg =>
             break;
     }
 
-    if (!string.IsNullOrEmpty(json))
+    if (mqConfig.EnableMessageQueue)
     {
-        if (isStatic)
-        {
-            var deliveryReport = await producer.ProduceAsync(mqConfig.StaticTopic, new Message<string, string>
-            {
-                Key = "deviceAisStaticMsg",
-                Value = json
-            });
-        }
-        else
-        {
-            var deliveryReport = await producer.ProduceAsync(mqConfig.DynamicTopic, new Message<string, string>
-            {
-                Key = "deviceAisDymamicTopic",
-                Value = json
-            });
-        }
+        await PublishMessage(json, isStatic, producer);
     }
 });
 
@@ -87,10 +75,18 @@ receiver.Sentences.Subscribe(async sentence =>
     Console.WriteLine(sentence);
 });
 
-
 await receiver.StartAsync(new CancellationTokenSource().Token);
 
 producer.Dispose();
+staticWriter.Close();
+staticWriter.Dispose();
+dynamicWriter.Close();
+dynamicWriter.Dispose();
+
+string tracksJson = JsonSerializer.Serialize(tracks);
+trackWriter.WriteLine(tracksJson);
+trackWriter.Close();
+trackWriter.Dispose();
 
 
 
@@ -116,15 +112,71 @@ MqConfig? GetMqConfiguration()
     return config.GetSection("MessageQueue").Get<MqConfig>();
 }
 
+StorageConfig? GetStorageConfiguration()
+{
+    IConfiguration config = new ConfigurationBuilder()
+        .AddJsonFile("settings.json", true, true)
+        .Build();
+
+    return config.GetSection("Storage").Get<StorageConfig>();
+}
+
 ReceiverHost? CreateReceiver(AisConfig? config)
 {
+    INmeaReceiver fileReceiver = (INmeaReceiver)new FileStreamNmeaReceiver(config.TestFile, config.TestFileLineInterval);
+
+    if (!mqConfig.EnableMessageQueue && storageConfig.EnableCapture)
+    {
+        fileReceiver = (INmeaReceiver)new FileStreamNmeaReceiver(config.TestFile);
+    }
+
     var receiver = config.TestMode
-        ? (INmeaReceiver)new FileStreamNmeaReceiver(config.TestFile, config.TestFileLineInterval)
+        ? fileReceiver
         : new NetworkStreamNmeaReceiver(
             config.Host, config.Port,
             config.RetryPeriodicity, config.RetryAttempts);
 
     return new ReceiverHost(receiver);
+}
+
+IProducer<string, string> CreateMqProducer(MqConfig? mqConfig1)
+{
+    var config = new ProducerConfig
+    {
+        BootstrapServers = $"{mqConfig1.Host}:{mqConfig1.Port}", // Kafka broker地址
+    };
+    var producer1 = new ProducerBuilder<string, string>(config).Build();
+    return producer1;
+}
+
+StreamWriter CreateStaticLogWriter(StorageConfig? config)
+{
+    if (File.Exists(config.StaticFile))
+    {
+        File.Delete(config.StaticFile);
+    }
+
+    return File.AppendText(config.StaticFile);
+}
+
+StreamWriter CreateDynamicLogWriter(StorageConfig? config)
+{
+    if (File.Exists(config.DynamicFile))
+    {
+        File.Delete(config.DynamicFile);
+    }
+
+    return File.AppendText(config.DynamicFile);
+}
+
+StreamWriter CreateTrackJsonWriter(StorageConfig? config)
+{
+    if (File.Exists(config.TrackFile))
+    {
+        File.Delete(config.TrackFile);
+    }
+
+    return File.AppendText(config.TrackFile);
 }
 
 string HandleType5Message(IAisMessage aisMessage)
@@ -156,11 +208,22 @@ string HandleType5Message(IAisMessage aisMessage)
         from = type5Msg.Channel,
     };
 
+    if (storageConfig.EnableCapture)
+    {
+        string content = $"5,{data.mmsi},{data.imo},{data.callSign},{data.shipName},{data.shipType},{data.len},{data.wid},{data.high},{data.draft},{data.time}";
+        staticWriter.WriteLine(content);
+    }
+
     return JsonSerializer.Serialize(data, options);
 }
 
 string HandleType24Message(IAisMessage aisMessage)
 {
+    if (!(aisMessage is AisMessageType24Part1))
+    {
+        return string.Empty;
+    }
+
     var type24Msg = (AisMessageType24Part1)aisMessage;
 
     var data = new VesselStaticInfo()
@@ -180,6 +243,12 @@ string HandleType24Message(IAisMessage aisMessage)
         msg = type24Msg.OriginalMessage,
         from = type24Msg.Channel,
     };
+
+    if (storageConfig.EnableCapture)
+    {
+        string content = $"24,{data.mmsi},{data.imo},{data.callSign},{data.shipName},{data.shipType},{data.len},{data.wid},{data.high},{data.draft},{data.time}";
+        staticWriter.WriteLine(content);
+    }
 
     return JsonSerializer.Serialize(data, options);
 }
@@ -205,7 +274,31 @@ string HandleType1To3Message(IAisMessage aisMessage)
         from = type1to3Msg.Channel,
     };
 
+    if (storageConfig.EnableCapture)
+    {
+        string content = $"1To3,{data.mmsi},{data.lon},{data.lat},{data.sailStatus},{data.hdg},{data.cog},{data.speed},{data.rot},{data.time}";
+        dynamicWriter.WriteLine(content);
+
+        RecordTrack(data, id++, type1to3Msg.Position?.Longitude, type1to3Msg.Position?.Latitude, tracks);
+    }
+
     return JsonSerializer.Serialize(data, options);
+}
+
+void RecordTrack(VesselDynamicInfo dynamicInfo, int index, double? longitude, double? latitude, List<Location> locations)
+{
+    if (dynamicInfo.mmsi == target)
+    {
+        if (index++ % interval == 0)
+        {
+            var location = new Location()
+            {
+                Lon = (double)longitude,
+                Lat = (double)latitude
+            };
+            locations.Add(location);
+        }
+    }
 }
 
 string HandleType18Message(IAisMessage aisMessage)
@@ -226,6 +319,14 @@ string HandleType18Message(IAisMessage aisMessage)
         msg = type18Msg.OriginalMessage,
         from = type18Msg.Channel,
     };
+
+    if (storageConfig.EnableCapture)
+    {
+        string content = $"18,{data.mmsi},{data.lon},{data.lat},{data.sailStatus},{data.hdg},{data.cog},{data.speed},{data.rot},{data.time}";
+        dynamicWriter.WriteLine(content);
+
+        RecordTrack(data, id++, type18Msg.Position?.Longitude, type18Msg.Position?.Latitude, tracks);
+    }
 
     return JsonSerializer.Serialize(data, options);
 }
@@ -249,5 +350,39 @@ string HandleType19Message(IAisMessage aisMessage)
         from = type19Msg.Channel,
     };
 
+    if (storageConfig.EnableCapture)
+    {
+        string content = $"19,{data.mmsi},{data.lon},{data.lat},{data.sailStatus},{data.hdg},{data.cog},{data.speed},{data.rot},{data.time}";
+        dynamicWriter.WriteLine(content);
+
+        RecordTrack(data, id++, type19Msg.Position?.Longitude, type19Msg.Position?.Latitude, tracks);
+    }
+
     return JsonSerializer.Serialize(data, options);
 }
+
+async Task PublishMessage(string msg, bool isStatic, IProducer<string, string> mqProducer)
+{
+    if (!string.IsNullOrEmpty(msg))
+    {
+        if (isStatic)
+        {
+            var result = await mqProducer.ProduceAsync(
+                mqConfig.StaticTopic, new Message<string, string>
+            {
+                Key = "deviceAisStaticMsg",
+                Value = msg
+            });
+        }
+        else
+        {
+            var result = await mqProducer.ProduceAsync(
+                mqConfig.DynamicTopic, new Message<string, string>
+            {
+                Key = "deviceAisDymamicTopic",
+                Value = msg
+            });
+        }
+    }
+}
+

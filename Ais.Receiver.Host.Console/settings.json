@@ -7,10 +7,11 @@
     "retryAttempts": 100,
     "retryPeriodicity": "00:00:00:01",
     "testMode": true,
-    "testFile": "C:\\Users\\overw\\Desktop\\AIS\\Part1\\BPT_20240205.csv",
-    "TestFileLineInterval": "00:00:00:00.050"
+    "testFile": "C:\\Users\\overw\\Desktop\\AIS\\Part1\\ELN_20240205.csv",
+    "TestFileLineInterval": "00:00:00:00.020"
   },
   "MessageQueue": {
+    "EnableMessageQueue": false,
     "host": "192.168.1.34",
     "port": "9092",
     "staticTopic": "deviceAisStaticTopic",
@@ -18,8 +19,9 @@
   },
   "Storage": {
     "enableCapture": true,
-    "connectionString": "",
-    "containerName": "nmea-ais",
-    "writeBatchSize": 500
+    "staticFile": "static.csv",
+    "dynamicFile": "dynamic.csv",
+    "trackMmsi": "477996240",
+    "trackFile": "track.json"
   }
 }
