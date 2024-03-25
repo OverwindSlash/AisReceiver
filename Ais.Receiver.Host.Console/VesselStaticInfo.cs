@@ -9,7 +9,7 @@
         public string imo { get; set; }
         public string callSign { get; set; }
         public string shipName { get; set; }
-        public int shipType { get; set; }
+        public string shipType { get; set; }
         public string a { get; set; }
         public string b { get; set; }
         public string c { get; set; }

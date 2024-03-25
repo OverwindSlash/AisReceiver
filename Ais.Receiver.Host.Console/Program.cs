@@ -141,6 +141,11 @@ ReceiverHost? CreateReceiver(AisConfig? config)
 
 IProducer<string, string> CreateMqProducer(MqConfig? mqConfig1)
 {
+    if (!mqConfig1.EnableMessageQueue)
+    {
+        return null;
+    }
+
     var config = new ProducerConfig
     {
         BootstrapServers = $"{mqConfig1.Host}:{mqConfig1.Port}", // Kafka broker地址
@@ -190,7 +195,7 @@ string HandleType5Message(IAisMessage aisMessage)
         imo = type5Msg.ImoNumber.ToString(),
         callSign = type5Msg.CallSign,
         shipName = type5Msg.VesselName.CleanVesselName(),
-        shipType = (int)type5Msg.ShipType,
+        shipType = ((int)type5Msg.ShipType).ToString(),
         a = type5Msg.DimensionToBow.ToString(),
         b = type5Msg.DimensionToStern.ToString(),
         c = type5Msg.DimensionToPort.ToString(),
@@ -231,7 +236,7 @@ string HandleType24Message(IAisMessage aisMessage)
         id = Guid.NewGuid().ToString(),
         mmsi = type24Msg.Mmsi.ToString(),
         callSign = type24Msg.CallSign,
-        shipType = (int)type24Msg.ShipType,
+        shipType = ((int)type24Msg.ShipType).ToString(),
         a = type24Msg.DimensionToBow.ToString(),
         b = type24Msg.DimensionToStern.ToString(),
         c = type24Msg.DimensionToPort.ToString(),
