@@ -8,7 +8,7 @@
     "retryPeriodicity": "00:00:00:01",
     "testMode": true,
     "testFile": "C:\\Users\\overw\\Desktop\\AIS\\Part4\\output_ELN_20240319.csv",
-    "TestFileLineInterval": "00:00:00:00.020"
+    "TestFileLineInterval": "00:00:00:00.001"
   },
   "MessageQueue": {
     "EnableMessageQueue": false,
@@ -18,10 +18,10 @@
     "dynamicTopic": "deviceAisDymamicTopic"
   },
   "Storage": {
-    "enableCapture": false,
+    "enableCapture": true,
     "staticFile": "static.csv",
     "dynamicFile": "dynamic.csv",
-    "trackMmsi": "413471870",
+    "trackMmsi": "477937300",
     "trackFile": "track.json"
   }
 }

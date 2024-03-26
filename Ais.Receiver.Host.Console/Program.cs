@@ -28,7 +28,7 @@ var options = new JsonSerializerOptions
 
 // Track options
 int id = 0;
-int interval = 10;
+int interval = 1;
 string target = storageConfig.TrackMmsi;
 var tracks = new List<Location>();
 
@@ -77,7 +77,10 @@ receiver.Sentences.Subscribe(async sentence =>
 
 await receiver.StartAsync(new CancellationTokenSource().Token);
 
-producer.Dispose();
+if (producer != null)
+{
+    producer.Dispose();
+}
 staticWriter.Close();
 staticWriter.Dispose();
 dynamicWriter.Close();
