@@ -20,6 +20,9 @@
         public string msg { get; set; }
         public string from { get; set; }
 
+        public string sourceIp { get; set; }
+        public string BSName { get; set; }
+
         public VesselDynamicInfo()
         {
             time = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();

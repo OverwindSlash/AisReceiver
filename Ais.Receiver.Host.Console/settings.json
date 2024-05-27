@@ -7,8 +7,8 @@
     "retryAttempts": 100,
     "retryPeriodicity": "00:00:00:01",
     "testMode": true,
-    "testFile": "C:\\Users\\overw\\Desktop\\AIS\\Part4\\output_ELN_20240319.csv",
-    "TestFileLineInterval": "00:00:00:00.001"
+    "testFile": "D:\\output_20240520\\output_20240520.csv",
+    "TestFileLineInterval": "00:00:00:00.040"
   },
   "MessageQueue": {
     "EnableMessageQueue": false,

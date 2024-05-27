@@ -214,6 +214,9 @@ string HandleType5Message(IAisMessage aisMessage)
         msgId = Guid.NewGuid().ToString(),
         msg = type5Msg.OriginalMessage,
         from = type5Msg.Channel,
+
+        sourceIp = "192.168.1.40",
+        BSName = "红花岭"
     };
 
     if (storageConfig.EnableCapture)
@@ -250,6 +253,9 @@ string HandleType24Message(IAisMessage aisMessage)
         msgId = Guid.NewGuid().ToString(),
         msg = type24Msg.OriginalMessage,
         from = type24Msg.Channel,
+
+        sourceIp = "192.168.1.40",
+        BSName = "红花岭"
     };
 
     if (storageConfig.EnableCapture)
@@ -280,6 +286,9 @@ string HandleType1To3Message(IAisMessage aisMessage)
         msgId = Guid.NewGuid().ToString(),
         msg = type1to3Msg.OriginalMessage,
         from = type1to3Msg.Channel,
+
+        sourceIp = "192.168.1.40",
+        BSName = "红花岭"
     };
 
     if (storageConfig.EnableCapture)
@@ -326,6 +335,9 @@ string HandleType18Message(IAisMessage aisMessage)
         msgId = Guid.NewGuid().ToString(),
         msg = type18Msg.OriginalMessage,
         from = type18Msg.Channel,
+
+        sourceIp = "192.168.1.40",
+        BSName = "红花岭"
     };
 
     if (storageConfig.EnableCapture)
@@ -356,6 +368,9 @@ string HandleType19Message(IAisMessage aisMessage)
         msgId = Guid.NewGuid().ToString(),
         msg = type19Msg.OriginalMessage,
         from = type19Msg.Channel,
+
+        sourceIp = "192.168.1.40",
+        BSName = "红花岭"
     };
 
     if (storageConfig.EnableCapture)
