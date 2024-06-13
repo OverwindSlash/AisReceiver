@@ -151,7 +151,7 @@ IProducer<string, string> CreateMqProducer(MqConfig? mqConfig1)
 
     var config = new ProducerConfig
     {
-        BootstrapServers = $"{mqConfig1.Host}:{mqConfig1.Port}", // Kafka broker地址
+        BootstrapServers = $"{mqConfig1.Host}", // Kafka broker地址
     };
     var producer1 = new ProducerBuilder<string, string>(config).Build();
     return producer1;
@@ -402,7 +402,7 @@ async Task PublishMessage(string msg, bool isStatic, IProducer<string, string> m
             var result = await mqProducer.ProduceAsync(
                 mqConfig.DynamicTopic, new Message<string, string>
             {
-                Key = "deviceAisDymamicTopic",
+                Key = "deviceAisDymamicMsg",
                 Value = msg
             });
         }

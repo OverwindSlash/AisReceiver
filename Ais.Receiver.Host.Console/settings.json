@@ -7,18 +7,17 @@
     "retryAttempts": 100,
     "retryPeriodicity": "00:00:00:01",
     "testMode": true,
-    "testFile": "D:\\output_20240520\\output_20240520.csv",
+    "testFile": "D:\\output_ELN_20240526.csv",
     "TestFileLineInterval": "00:00:00:00.040"
   },
   "MessageQueue": {
-    "EnableMessageQueue": false,
-    "host": "192.168.2.2",
-    "port": "9092",
+    "EnableMessageQueue": true,
+    "host": "192.168.2.71:9092,192.168.2.72:9092,192.168.2.73:9092,192.168.2.74:9092",
     "staticTopic": "deviceAisStaticTopic",
     "dynamicTopic": "deviceAisDymamicTopic"
   },
   "Storage": {
-    "enableCapture": true,
+    "enableCapture": false,
     "staticFile": "static.csv",
     "dynamicFile": "dynamic.csv",
     "trackMmsi": "477937300",
